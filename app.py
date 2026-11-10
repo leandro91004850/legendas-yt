@@ -34,7 +34,7 @@ from youtube_transcript_api import (
     YouTubeTranscriptApi,
 )
 
-from tradutor import TranslateError, Translator, google_batch, microsoft_batch
+from tradutor import ENGINES, MYMEMORY_DAILY_CHARS, RESERVE, RateLimited, TranslateError, Translator
 
 BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 UI_DIR = BASE_DIR / "ui"
@@ -200,6 +200,23 @@ class Api:
             time.sleep(0.25)
         return self._alive(job)
 
+    def _wait_block(self, job, until, fallback=""):
+        """O Google bloqueou (HTTP 429) e a reserva não deu conta (`fallback` diz por quê):
+        espera sem mandar pedidos e mostra quando tenta o Google de novo."""
+        while True:
+            left = until - time.time()
+            if left <= 0:
+                return self._alive(job)
+            when = time.strftime("%H:%M", time.localtime(until))
+            mins = "menos de 1 min" if left < 60 else f"{int((left + 59) // 60)} min"
+            reserve = f" {fallback}." if fallback else ""
+            self._js("setStatus", job,
+                     "O Google bloqueou temporariamente as traduções por excesso de pedidos (HTTP 429)."
+                     f"{reserve} Nova tentativa no Google às {when} (em {mins}); a tradução continua sozinha.",
+                     True)
+            if not self._sleep(job, min(left, 15)):
+                return False
+
     def _next_chunk(self, pending, chunks):
         after = [c for c in pending if chunks[c][-1][0] >= self._focus]
         return min(after) if after else min(pending)
@@ -247,7 +264,7 @@ class Api:
         # 2) tradução em lotes, começando pelo trecho onde o vídeo está
         items = [(i, c["text"]) for i, c in enumerate(cues) if c["text"]]
         chunks = make_chunks(items)
-        translator = Translator(src_code if src_code in ("en", "pt") else "auto", tgt)
+        translator = Translator(src_code if src_code in ("en", "pt") else "auto", tgt, track.language_code)
         collected, pending, last_error = [], list(range(len(chunks))), ""
 
         for wait in (0, *RETRY_WAITS):
@@ -266,6 +283,11 @@ class Api:
                 chunk = chunks[cid]
                 try:
                     out = translator.translate([t for _, t in chunk])
+                except RateLimited as e:  # o Google bloqueou e a reserva não deu conta: espera e retoma sozinho
+                    pending.append(cid)
+                    if not self._wait_block(job, e.until, e.fallback):
+                        return
+                    continue
                 except TranslateError as e:
                     last_error = str(e)
                     failed.append(cid)
@@ -280,6 +302,13 @@ class Api:
                 collected.extend(pairs)
                 if self._alive(job):
                     self._js("onTranslations", job, pairs)
+                    if translator.last == "MyMemory":  # a interface acabou de pôr "Traduzindo… N%"
+                        why = ("o Google bloqueou temporariamente" if translator.google_blocked
+                               else "o Google falhou")
+                        daily = f"{MYMEMORY_DAILY_CHARS:,}".replace(",", ".")
+                        self._js("setStatus", job,
+                                 f"Traduzindo pelo MyMemory (reserva, até {daily} caracteres por dia), "
+                                 f"porque {why}… {round(100 * len(collected) / len(items))}%")
             pending = failed
 
         if not self._alive(job):
@@ -303,15 +332,25 @@ class Api:
 def diagnose(url: str | None) -> int:
     print("Legendas YT — diagnóstico\n")
     samples = ["Hello, how are you?", "I started listening more.", "Do you understand English but feel"]
-    ok = 0
-    for name, fn in (("Google", google_batch), ("Microsoft", microsoft_batch)):
+    def check(name, fn):
+        """Traduz as amostras; devolve (deu certo?, hora até quando o Google bloqueia ou None)."""
         t0 = time.time()
         try:
             out = fn(samples, "en", "pt")
-            print(f"[OK]    {name} ({time.time() - t0:.1f} s): {out}")
-            ok += 1
+            print(f"[OK]    {name}, {time.time() - t0:.1f} s: {out}")
+            return True, None
         except Exception as e:
             print(f"[FALHA] {e}" if isinstance(e, TranslateError) else f"[FALHA] {name}: {e}")
+            return False, e.until if isinstance(e, RateLimited) else None
+
+    results = [check(name, fn) for name, fn in ENGINES.items()]  # os modos do Google, na ordem do app
+    blocked = max((until for _, until in results if until), default=None)
+    if blocked:
+        print(f"        O Google bloqueou temporariamente este IP por excesso de pedidos. Tente de novo depois das "
+              f"{time.strftime('%H:%M', time.localtime(blocked))}; enquanto isso o app usa a reserva "
+              "e depois volta ao Google sozinho.")
+    results += [check(name, fn) for name, fn in RESERVE.items()]
+    ok = sum(good for good, _ in results)
     if url:
         vid = extract_video_id(url)
         try:
@@ -322,7 +361,9 @@ def diagnose(url: str | None) -> int:
             print(f"[OK]    Legendas do YouTube: {n} falas em {track.language_code} (disponíveis: {names})")
         except Exception as e:
             print(f"[FALHA] Legendas do YouTube: {friendly_error(e)} [{type(e).__name__}]")
-    print("\nPelo menos um tradutor precisa estar OK para o app traduzir.")
+    daily = f"{MYMEMORY_DAILY_CHARS:,}".replace(",", ".")
+    print("\nPelo menos um tradutor precisa estar OK para o app traduzir. O MyMemory é só a reserva: "
+          f"até {daily} caracteres por dia sem cadastro (umas 200 falas), usados quando o Google falha.")
     return 0 if ok else 1
 
 
