@@ -39,6 +39,9 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
   após 5, 15 e 30 s, e o erro aparece em vermelho no topo da janela.
 - A interface (`ui/index.html`) usa a API oficial do player do YouTube e consulta o tempo
   do vídeo 10×/s para mostrar a fala certa.
+- A interface é servida por um servidor local e aberta em `http://localhost:8765` — por nome,
+  não por IP: com a página em `127.0.0.1` o YouTube recusa alguns vídeos (ex.: compilações
+  de música) com "Este vídeo não está disponível", mesmo quando o dono permite incorporar.
 
 ## Se a tradução não aparecer
 

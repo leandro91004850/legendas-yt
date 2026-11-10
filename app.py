@@ -15,6 +15,7 @@ import functools
 import json
 import logging
 import re
+import socket
 import sys
 import tempfile
 import threading
@@ -327,8 +328,17 @@ def diagnose(url: str | None) -> int:
 
 
 # --------------------------------------------------------------------------- #
-# Servidor local (o player do YouTube exige página servida por http, não file://)
+# Servidor local
+# O player do YouTube exige página servida por http (não file://) e aberta por um
+# NOME, não por IP: com a página em 127.0.0.1 (ou [::1], 192.168.…) o YouTube
+# recusa alguns vídeos (ex.: VVHb0f-nx1Y, uma compilação de músicas) com "Este
+# vídeo não está disponível", mesmo com a incorporação liberada pelo dono.
+# Por isso a interface abre em http://localhost:PORTA.
+# "localhost" pode virar 127.0.0.1 ou ::1, então o servidor escuta nos dois.
 # --------------------------------------------------------------------------- #
+HOST = "localhost"
+
+
 class QuietHandler(SimpleHTTPRequestHandler):
     def log_message(self, *args):
         pass
@@ -338,14 +348,47 @@ class QuietHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+class LocalServer(ThreadingHTTPServer):
+    # No Windows, o SO_REUSEADDR que o http.server liga deixa outro programa (ex.: outra
+    # cópia do app) escutar na mesma porta e responder no lugar deste. Porta exclusiva.
+    allow_reuse_address = not hasattr(socket, "SO_EXCLUSIVEADDRUSE")
+
+    def server_bind(self):
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
+class LocalServer6(LocalServer):
+    address_family = socket.AF_INET6
+
+
+def has_ipv6_loopback() -> bool:
+    try:
+        with socket.socket(socket.AF_INET6, socket.SOCK_STREAM) as s:
+            s.bind(("::1", 0))
+        return True
+    except OSError:
+        return False
+
+
 def start_server() -> int:
     handler = functools.partial(QuietHandler, directory=str(UI_DIR))
-    try:
-        httpd = ThreadingHTTPServer(("127.0.0.1", PREFERRED_PORT), handler)
-    except OSError:
-        httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    return httpd.server_port
+    ipv6 = socket.has_ipv6 and has_ipv6_loopback()
+    for port in (PREFERRED_PORT, 0, 0, 0):
+        servers = []
+        try:
+            servers.append(LocalServer(("127.0.0.1", port), handler))
+            if ipv6:  # mesma porta no ::1, senão "localhost" pode cair em outro programa
+                servers.append(LocalServer6(("::1", servers[0].server_port), handler))
+        except OSError:  # porta ocupada: tenta outra
+            for s in servers:
+                s.server_close()
+            continue
+        for s in servers:
+            threading.Thread(target=s.serve_forever, daemon=True).start()
+        return servers[0].server_port
+    raise OSError("Não consegui abrir o servidor local da interface.")
 
 
 def main():
@@ -357,7 +400,7 @@ def main():
     import webview  # importado aqui para o diagnóstico rodar mesmo sem o pywebview
 
     port = start_server()
-    url = f"http://127.0.0.1:{port}/index.html"
+    url = f"http://{HOST}:{port}/index.html"
     if args:
         url += "?u=" + quote(args[0], safe="")
 
