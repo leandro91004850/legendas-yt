@@ -36,12 +36,23 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 ## Como funciona
 
 - `youtube-transcript-api` baixa a legenda do vídeo (manual ou automática), com tempos.
-- `tradutor.py` traduz as falas em lotes, sempre uma tradução por fala:
-  1. Google Tradutor (lote com uma fala por linha);
-  2. se falhar, Microsoft Translator (o mesmo serviço do tradutor do Edge);
-  3. se o Google juntar falas e a Microsoft falhar, Google fala por fala.
+- `tradutor.py` traduz as falas em lotes pelo Google Tradutor (endpoint gratuito, sem chave),
+  sempre uma tradução por fala:
+  1. lote com uma fala por linha (o Google vê o contexto das frases);
+  2. se o Google juntar duas falas numa linha, o mesmo lote vai de novo num pedido só, com cada
+     fala num item separado: a resposta traz sempre uma tradução por fala;
+  3. se isso também falhar, fala por fala (um pedido por fala, mais lento).
   O trecho onde o vídeo está é traduzido primeiro. Lotes que falharem são tentados de novo
   após 5, 15 e 30 s, e o erro aparece em vermelho no topo da janela.
+- Se o Google falhar, entra a reserva: o MyMemory (gratuito, sem cadastro e sem e-mail). Ele aceita
+  até 5.000 caracteres por dia (umas 200 falas, alguns minutos de vídeo) e 500 bytes por pedido,
+  então as falas vão em lotes menores, a partir do trecho onde o vídeo está; se as linhas não
+  baterem, o lote é dividido até casar. Quando a cota do dia acaba, o app avisa e espera o Google.
+- Se o Google bloquear por excesso de pedidos (HTTP 429), o app para de mandar pedidos a ele,
+  mostra a hora da próxima tentativa (depois de 2, 5, 10 e então a cada 15 min, ou do tempo que o
+  Google pedir) e retoma sozinho; daí em diante, manda no máximo 1 pedido a cada 2 s.
+- A reserva antiga, da Microsoft, saiu: o endpoint gratuito usado pelo Edge passou a responder
+  404 (novembro de 2026), e o Bing Tradutor web junta as falas.
 - A interface (`ui/index.html`) usa a API oficial do player do YouTube e consulta o tempo
   do vídeo 10×/s para mostrar a fala certa.
 - A interface é servida por um servidor local e aberta em `http://localhost:8765` — por nome,
@@ -51,19 +62,26 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 ## Se a tradução não aparecer
 
 1. Leia a mensagem em vermelho no topo da janela.
-2. Rode o diagnóstico (não abre janela; testa os dois tradutores e as legendas do vídeo):
+2. Rode o diagnóstico (não abre janela; testa os dois modos do Google, a reserva MyMemory e as
+   legendas do vídeo):
    ```bash
    python app.py --diagnostico "https://www.youtube.com/watch?v=XXXXXXXXXXX"
    ```
 3. Os detalhes de cada erro ficam em `legendas-yt.log`, na pasta do app.
+4. "O Google bloqueou temporariamente as traduções por excesso de pedidos (HTTP 429)": o Google
+   barrou este IP por um tempo, que pode passar de uma hora (vídeos muito longos ou muitos vídeos
+   seguidos). Não precisa fazer nada: enquanto isso o MyMemory traduz o trecho que está passando
+   (até acabar a cota do dia), e o app mostra a hora da próxima tentativa no Google e volta a
+   usá-lo sozinho.
 
 ## Limitações
 
 - Precisa que o vídeo tenha legenda (manual ou automática). Sem legenda nenhuma, não há o que traduzir.
 - Vídeos cujo dono bloqueou reprodução fora do YouTube (alguns clipes de gravadoras)
   não tocam no app — aparece "não permite reprodução fora do YouTube".
-- As legendas vêm de uma biblioteca não oficial e os tradutores são os endpoints gratuitos
-  do Google e da Microsoft. Se algum deles mudar, atualize com
+- As legendas vêm de uma biblioteca não oficial e a tradução usa os endpoints gratuitos do
+  Google Tradutor e, na reserva, do MyMemory (5.000 caracteres por dia: não dá para um vídeo
+  inteiro). Se algo parar de funcionar, atualize com
   `pip install -U -r requirements.txt` e rode o diagnóstico.
 
 ## Gerar um .exe (opcional)
