@@ -162,3 +162,12 @@
 2026-11-10 15:31:13,244 WARNING Microsoft: HTTP 404
 2026-11-10 15:31:13,246 WARNING 1756 falas ficaram sem tradução (Google: limite de uso atingido (HTTP 429) · Microsoft: HTTP 404). Clique em Abrir para tentar de novo. Detalhes em legendas-yt.log
 2026-11-10 15:36:08,470 INFO Vídeo XH32psFPxao: 1756 falas em en (auto) -> pt
+2026-11-10 15:54:48,208 INFO Vídeo XH32psFPxao: 1756 falas em en (auto) -> pt
+2026-11-10 15:56:30,743 INFO Vídeo XH32psFPxao: 1756 falas em en (auto) -> pt
+2026-11-10 16:23:00,819 INFO Vídeo VVHb0f-nx1Y: 2424 falas em en (auto) -> pt
+2026-11-10 16:23:04,468 WARNING Google: enviei 32 falas e voltaram 31
+2026-11-10 16:23:04,558 INFO Google (itens): lote de 32 falas traduzido
+2026-11-10 16:23:04,662 WARNING Google: enviei 35 falas e voltaram 34
+2026-11-10 16:23:04,753 INFO Google (itens): lote de 35 falas traduzido
+2026-11-10 16:23:06,702 WARNING Google: enviei 40 falas e voltaram 39
+2026-11-10 16:23:06,790 INFO Google (itens): lote de 40 falas traduzido
