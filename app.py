@@ -5,7 +5,7 @@ Abre o vídeo dentro do app, baixa a legenda original do YouTube e mostra,
 sincronizada com o vídeo, a linha original + a tradução.
 
 Uso:
-    python app.py                       # abre o app vazio
+    python app.py                       # reabre o último vídeo assistido (ou o app vazio)
     python app.py "https://youtu.be/…"  # já abre com o vídeo
     python app.py --diagnostico [link]  # testa tradutores e legendas, sem abrir janela
 """
@@ -14,6 +14,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import os
 import re
 import socket
 import sys
@@ -39,7 +40,7 @@ from tradutor import TranslateError, Translator, google_batch, microsoft_batch
 
 BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 UI_DIR = BASE_DIR / "ui"
-PREFERRED_PORT = 8765      # porta fixa = preferências (tamanho da fonte) persistem
+PREFERRED_PORT = 8765      # porta preferida da interface (se estiver ocupada, usa outra)
 CHUNK_CHARS = 1200         # tamanho de cada lote enviado ao tradutor
 CHUNK_LINES = 40
 RETRY_WAITS = (5, 15, 30)  # novas tentativas para lotes que falharam (segundos)
@@ -153,16 +154,149 @@ def friendly_error(exc: Exception) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Dados que sobrevivem ao fechar o app: histórico dos últimos vídeos (com o ponto
+# onde cada um parou) e preferências da interface. Ficam em arquivos no perfil do
+# usuário: o WebView roda em modo privado (padrão do pywebview) e apaga o
+# localStorage quando o app fecha.
+# --------------------------------------------------------------------------- #
+HISTORY_LIMIT = 30
+HISTORY_SAVE_EVERY = 15  # segundos entre gravações da posição do vídeo
+PREF_KEYS = ("subSize", "show")  # tamanho da legenda; o que mostrar sobre o vídeo
+
+
+def data_dir() -> Path:
+    if sys.platform == "win32":
+        base = os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming"
+    else:
+        base = os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share"
+    return Path(base) / "LegendasYT"
+
+
+def read_json(path: Path, default):
+    """Conteúdo do arquivo, ou `default` se ele não existir, estiver estragado ou for de outro tipo."""
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return default
+    except (OSError, ValueError) as e:
+        log.warning("Arquivo ilegível (%s): %r", path, e)
+        return default
+    return data if isinstance(data, type(default)) else default
+
+
+def write_json(path: Path, data) -> bool:
+    """Grava sem deixar arquivo pela metade (escreve num temporário e troca)."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(tmp, path)
+        return True
+    except OSError as e:
+        log.warning("Não consegui gravar %s: %r", path, e)
+        return False
+
+
+class Prefs:
+    """Preferências da interface: {subSize: int, show: "both" | "tr" | "orig"}."""
+
+    def __init__(self, path: Path):
+        self.path = path
+        self._lock = threading.Lock()
+        self._data = {k: v for k, v in read_json(path, {}).items() if k in PREF_KEYS}
+
+    def all(self) -> dict:
+        with self._lock:
+            return dict(self._data)
+
+    def set(self, key: str, value) -> None:
+        if key not in PREF_KEYS or isinstance(value, bool) or not isinstance(value, (int, str)):
+            return
+        with self._lock:
+            if self._data.get(key) != value:
+                self._data[key] = value
+                write_json(self.path, self._data)
+
+
+class History:
+    """Últimos vídeos abertos, o mais recente primeiro: {id, url, source, at, title, author, pos, dur}."""
+
+    def __init__(self, path: Path, limit: int = HISTORY_LIMIT):
+        self.path, self.limit = path, limit
+        self._lock = threading.Lock()
+        self._items = self._read()
+        self._dirty, self._saved_at = False, 0.0
+
+    def _read(self) -> list[dict]:
+        data = read_json(self.path, [])
+        ok = [x for x in data if isinstance(x, dict) and re.fullmatch(r"[\w-]{11}", str(x.get("id", "")))]
+        return ok[: self.limit]
+
+    def items(self) -> list[dict]:
+        with self._lock:
+            return [dict(x) for x in self._items]
+
+    def opened(self, vid: str, source: str) -> bool:
+        """Vídeo aberto agora: vai para o topo. Devolve True se ainda não tem título."""
+        with self._lock:
+            item = next((x for x in self._items if x["id"] == vid), None)
+            if item is None:
+                item = {"id": vid}
+            else:
+                self._items.remove(item)
+            item.update(url=f"https://www.youtube.com/watch?v={vid}", source=source, at=int(time.time()))
+            self._items.insert(0, item)
+            del self._items[self.limit:]
+            self._dirty = True
+            need_title = not item.get("title")
+        self.save()
+        return need_title
+
+    def update(self, vid: str, **fields) -> None:
+        """Atualiza título ou posição de um vídeo, sem mudar a ordem."""
+        with self._lock:
+            item = next((x for x in self._items if x["id"] == vid), None)
+            if item is not None:
+                item.update(fields)
+                self._dirty = True
+
+    def save(self, force: bool = True) -> None:
+        """Grava se algo mudou; com force=False, no máximo a cada HISTORY_SAVE_EVERY segundos."""
+        with self._lock:
+            if not self._dirty or (not force and time.time() - self._saved_at < HISTORY_SAVE_EVERY):
+                return
+            if write_json(self.path, self._items):
+                self._dirty, self._saved_at = False, time.time()
+
+
+def video_title(vid: str) -> tuple[str, str]:
+    """Título e canal do vídeo (oEmbed do YouTube); ('', '') se não der."""
+    try:
+        r = requests.get("https://www.youtube.com/oembed", timeout=(6, 10),
+                         params={"url": f"https://www.youtube.com/watch?v={vid}", "format": "json"})
+        if r.ok:
+            d = r.json()
+            return clean(d.get("title")), clean(d.get("author_name"))
+    except (requests.RequestException, ValueError):
+        pass
+    return "", ""
+
+
+# --------------------------------------------------------------------------- #
 # Ponte Python <-> interface
 # --------------------------------------------------------------------------- #
 class Api:
-    def __init__(self, log_path: Path | None = None):
+    def __init__(self, log_path: Path | None = None, history: History | None = None,
+                 prefs: Prefs | None = None):
         self._window = None
         self._job = 0
         self._focus = 0
         self._lock = threading.Lock()
         self._cache: dict[tuple[str, str], tuple[dict, list, str]] = {}
         self._log_name = log_path.name if log_path else "legendas-yt.log"
+        # privados: o pywebview expõe ao JavaScript todo atributo público
+        self._history = history or History(data_dir() / "historico.json")
+        self._prefs = prefs or Prefs(data_dir() / "preferencias.json")
 
     # ---- chamados pelo JavaScript ----
     def load(self, url, source="auto"):
@@ -174,7 +308,30 @@ class Api:
             job = self._job
             self._focus = 0
         threading.Thread(target=self._work, args=(job, vid, source), daemon=True).start()
+        if self._history.opened(vid, source):
+            threading.Thread(target=self._fetch_title, args=(vid,), daemon=True).start()
         return {"ok": True, "videoId": vid, "job": job}
+
+    def history(self):
+        """Últimos vídeos abertos, o mais recente primeiro."""
+        return self._history.items()
+
+    def progress(self, video_id, seconds, duration):
+        """A interface avisa onde o vídeo está, para retomar dali depois."""
+        try:
+            pos, dur = float(seconds), float(duration)
+        except (TypeError, ValueError):
+            return
+        if extract_video_id(str(video_id)) == video_id and 0 <= pos < 1e7 and 0 <= dur < 1e7:
+            self._history.update(video_id, pos=round(pos, 1), dur=round(dur, 1))
+            self._history.save(force=False)
+
+    def prefs(self):
+        """Preferências salvas da interface (tamanho da legenda, o que mostrar)."""
+        return self._prefs.all()
+
+    def set_pref(self, key, value):
+        self._prefs.set(key, value)
 
     def focus(self, job, index):
         """A interface avisa onde o vídeo está, para traduzir esse trecho primeiro."""
@@ -185,6 +342,12 @@ class Api:
         self._window.toggle_fullscreen()
 
     # ---- internos ----
+    def _fetch_title(self, vid):
+        title, author = video_title(vid)
+        if title:
+            self._history.update(vid, title=title, author=author)
+            self._history.save()
+
     def _alive(self, job):
         return job == self._job
 
@@ -416,6 +579,7 @@ def main():
     )
     api._window = window
     webview.start()
+    api._history.save()  # guarda onde o último vídeo parou
 
 
 if __name__ == "__main__":

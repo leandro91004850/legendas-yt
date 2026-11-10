@@ -27,6 +27,11 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 3. A tradução do começo chega em 1–2 s; o resto vai sendo preenchido enquanto o vídeo toca.
 4. Extras: A−/A+ (tamanho da legenda), "Só tradução"/"Só original",
    ☰ lista de falas (clique para pular até a fala), ⛶ tela cheia com legendas (Esc sai).
+5. **Recentes** lista os últimos 30 vídeos abertos, com o ponto onde você parou; clique para
+   continuar dali. Ao abrir o app de novo, ele volta no último vídeo, parado onde estava,
+   com o mesmo tamanho de legenda e o mesmo modo (original, tradução ou os dois).
+   O histórico e essas preferências ficam em `%APPDATA%\LegendasYT\` (Windows) ou
+   `~/.local/share/LegendasYT/` (Linux).
 
 ## Como funciona
 
