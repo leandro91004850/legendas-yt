@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Legendas YT</title>
+<style>
+  :root {
+    --sub-size: 26px;
+    --bg: #0f0f10; --panel: #18181b; --line: #2a2a2e;
+    --text: #ececef; --muted: #9a9aa2; --accent: #ffd54a; --red: #e5322d;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 system-ui, "Segoe UI", Roboto, Ubuntu, sans-serif; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 12px;
+    background: var(--panel); border-bottom: 1px solid var(--line); }
+  input, select, button { background: #232327; color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 7px 10px; font: inherit; }
+  input { flex: 1 1 280px; min-width: 200px; }
+  input:focus, select:focus { outline: 1px solid #555; }
+  button { cursor: pointer; white-space: nowrap; }
+  button:hover { background: #2d2d33; }
+  button.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+  .group { display: flex; gap: 4px; }
+  #status { flex: 1 1 220px; color: var(--muted); font-size: 12px; line-height: 1.3; }
+  #status:empty { display: none; }
+  #status.err { color: #ff7a70; }
+
+  main { flex: 1; display: flex; min-height: 0; }
+  #stage { flex: 1; min-width: 0; position: relative; background: #000;
+    display: flex; align-items: center; justify-content: center; }
+  #frame { position: relative; }
+  #frame iframe, #player { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #empty { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 6px;
+    align-items: center; justify-content: center; color: var(--muted); text-align: center; padding: 20px; }
+  #empty b { color: var(--text); font-size: 18px; }
+
+  #subs { position: absolute; left: 4%; right: 4%; bottom: 13%; text-align: center;
+    pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  #subs span { display: inline-block; max-width: 100%; padding: 2px 12px; border-radius: 5px;
+    background: rgba(0,0,0,.74); text-shadow: 0 1px 2px #000; }
+  #subs span:empty { display: none; }
+  #sub-orig { font-size: var(--sub-size); color: #fff; }
+  #sub-tr { font-size: calc(var(--sub-size) * .95); color: var(--accent); }
+
+  aside { width: 360px; flex: none; border-left: 1px solid var(--line); background: var(--panel);
+    display: flex; flex-direction: column; min-height: 0; }
+  aside .head { padding: 8px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  #list { flex: 1; overflow-y: auto; }
+  .cue { padding: 7px 12px; border-bottom: 1px solid #202024; cursor: pointer; }
+  .cue:hover { background: #1f1f24; }
+  .cue.active { background: #2a2614; box-shadow: inset 3px 0 var(--accent); }
+  .cue .t { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .cue .o { margin: 1px 0; }
+  .cue .x { color: var(--accent); opacity: .9; }
+  .cue .x:empty::before { content: "…"; color: var(--muted); }
+
+  body.no-side aside { display: none; }
+  body.fs header, body.fs aside { display: none; }
+  #exitfs { display: none; position: absolute; top: 10px; right: 10px; opacity: .35; z-index: 5; }
+  #exitfs:hover { opacity: 1; }
+  body.fs #exitfs { display: block; }
+</style>
+</head>
+<body>
+<header>
+  <input id="url" placeholder="Cole o link do vídeo do YouTube e tecle Enter" spellcheck="false" autofocus>
+  <select id="source" title="Idioma da legenda original">
+    <option value="auto">Automático</option>
+    <option value="en">Inglês → Português</option>
+    <option value="pt">Português → Inglês</option>
+  </select>
+  <button class="primary" id="open">Abrir</button>
+  <select id="show" title="O que mostrar sobre o vídeo">
+    <option value="both">Original + tradução</option>
+    <option value="tr">Só tradução</option>
+    <option value="orig">Só original</option>
+  </select>
+  <div class="group">
+    <button id="smaller" title="Diminuir legenda">A−</button>
+    <button id="bigger" title="Aumentar legenda">A+</button>
+  </div>
+  <button id="toggleSide" title="Mostrar/ocultar lista de falas">☰</button>
+  <button id="fullscreen" title="Tela cheia (com legendas)">⛶</button>
+  <span id="status"></span>
+</header>
+
+<main>
+  <section id="stage">
+    <div id="frame">
+      <div id="player"></div>
+      <div id="empty"><b>Legendas YT</b>Cole um link do YouTube acima.<br>
+        A legenda original e a tradução aparecem sobre o vídeo.</div>
+      <div id="subs"><span id="sub-orig"></span><span id="sub-tr"></span></div>
+    </div>
+    <button id="exitfs">Sair da tela cheia</button>
+  </section>
+  <aside>
+    <div class="head" id="sideHead">Falas do vídeo — clique para pular</div>
+    <div id="list"></div>
+  </aside>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  let player = null, apiReady = false, pendingId = null, currentId = null;
+  let job = 0, cues = [], tr = [], cur = -1, translatedCount = 0, meta = null;
+  let show = store.get('show', 'both');
+  let subSize = store.get('subSize', 26);
+  let userScrolledAt = 0, lastFocusAt = 0, lastReq = { key: '', at: 0 };
+
+  // ---------- status ----------
+  function setStatusText(msg, err) {
+    $('status').textContent = msg || '';
+    $('status').title = msg || '';
+    $('status').classList.toggle('err', !!err);
+  }
+
+  // ---------- player ----------
+  window.onYouTubeIframeAPIReady = () => {
+    apiReady = true;
+    if (pendingId) playVideo(pendingId);
+  };
+
+  function playVideo(id) {
+    currentId = id;
+    $('empty').style.display = 'none';
+    if (!apiReady) { pendingId = id; return; }
+    pendingId = null;
+    if (player && player.loadVideoById) { player.loadVideoById(id); return; }
+    player = new YT.Player('player', {
+      width: '100%', height: '100%', videoId: id,
+      playerVars: { autoplay: 1, rel: 0, fs: 0, cc_load_policy: 0, iv_load_policy: 3,
+                    playsinline: 1, origin: location.origin },
+      events: { onError: e => {
+        const msgs = {
+          2: 'ID de vídeo inválido.',
+          5: 'Erro do player HTML5.',
+          100: 'Vídeo removido ou privado.',
+          101: 'O dono do vídeo não permite reprodução fora do YouTube.',
+          150: 'O dono do vídeo não permite reprodução fora do YouTube.',
+          153: 'O YouTube recusou o player incorporado (erro 153).',
+        };
+        setStatusText(msgs[e.data] || ('Erro do player: ' + e.data), true);
+      } },
+    });
+  }
+
+  // ---------- abrir vídeo ----------
+  async function openVideo() {
+    const url = $('url').value.trim();
+    if (!url) return;
+    if (!(window.pywebview && window.pywebview.api)) { setStatusText('Iniciando… tente de novo em 1 s'); return; }
+    const key = url + '|' + $('source').value;            // colar + Enter não pede 2 vezes
+    if (key === lastReq.key && Date.now() - lastReq.at < 1500) return;
+    lastReq = { key, at: Date.now() };
+    const r = await window.pywebview.api.load(url, $('source').value);
+    if (!r.ok) { setStatusText(r.error, true); return; }
+    if (r.job > job) { job = r.job; reset(); }
+    if (r.videoId !== currentId) playVideo(r.videoId);
+  }
+
+  function reset() {
+    cues = []; tr = []; cur = -1; translatedCount = 0; meta = null;
+    $('list').innerHTML = '';
+    $('sideHead').textContent = 'Falas do vídeo — clique para pular';
+    render();
+  }
+
+  // ---------- chamados pelo Python ----------
+  function accept(j) {
+    if (j < job) return false;          // resultado de um pedido antigo
+    if (j > job) { job = j; reset(); }
+    return true;
+  }
+
+  const app = {
+    setStatus(j, msg, err) { if (j >= job) setStatusText(msg, err); },
+
+    onTranscript(j, m) {
+      if (!accept(j)) return;
+      meta = m; cues = m.cues; tr = new Array(cues.length).fill(null); translatedCount = 0;
+      $('sideHead').textContent = `${m.sourceName}${m.generated ? ' (legenda automática)' : ''} → ${m.targetName} · ${cues.length} falas`;
+      buildList();
+      cur = -1; tick();
+    },
+
+    onTranslations(j, pairs) {
+      if (!accept(j)) return;
+      const items = $('list').children;
+      for (const [i, text] of pairs) {
+        if (tr[i] === null) translatedCount++;
+        tr[i] = text;
+        if (items[i]) items[i].querySelector('.x').textContent = text;
+      }
+      if (meta && translatedCount < cues.length) {
+        setStatusText(`Traduzindo para ${meta.targetName}… ${Math.round(100 * translatedCount / cues.length)}%`);
+      }
+      render();
+    },
+  };
+  window.app = app;
+
+  // ---------- sincronização ----------
+  function fmt(s) {
+    s = Math.floor(s);
+    const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), ss = String(s % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+  }
+
+  function lastStarted(t) {               // última fala que começou antes de t
+    let lo = 0, hi = cues.length - 1, ans = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (cues[mid].start <= t) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+    }
+    return ans;
+  }
+
+  function tick() {
+    if (!player || !player.getCurrentTime || !cues.length) return;
+    const t = player.getCurrentTime() || 0;
+    const last = lastStarted(t);
+    const idx = last >= 0 && t <= cues[last].start + cues[last].dur + 0.25 ? last : -1;
+
+    // trecho atual ainda sem tradução? pede ao Python para traduzi-lo primeiro
+    const here = Math.max(last, 0);
+    if (tr[here] === null && Date.now() - lastFocusAt > 1500 && window.pywebview && window.pywebview.api) {
+      lastFocusAt = Date.now();
+      window.pywebview.api.focus(job, here);
+    }
+
+    if (idx === cur) return;
+    const items = $('list').children;
+    if (items[cur]) items[cur].classList.remove('active');
+    cur = idx;
+    if (items[cur]) {
+      items[cur].classList.add('active');
+      if (Date.now() - userScrolledAt > 4000) items[cur].scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    render();
+  }
+  setInterval(tick, 100);
+
+  function render() {
+    const c = cues[cur];
+    const orig = c ? c.text : '';
+    const trans = c ? (tr[cur] ?? '…') : '';
+    $('sub-orig').textContent = show === 'tr' ? '' : orig;
+    $('sub-tr').textContent = show === 'orig' ? '' : trans;
+  }
+
+  function buildList() {
+    const frag = document.createDocumentFragment();
+    cues.forEach((c, i) => {
+      const el = document.createElement('div');
+      el.className = 'cue';
+      el.innerHTML = '<div class="t"></div><div class="o"></div><div class="x"></div>';
+      el.querySelector('.t').textContent = fmt(c.start);
+      el.querySelector('.o').textContent = c.text;
+      el.querySelector('.x').textContent = tr[i] ?? '';
+      el.onclick = () => { if (player && player.seekTo) { player.seekTo(c.start, true); player.playVideo(); } };
+      frag.appendChild(el);
+    });
+    $('list').innerHTML = '';
+    $('list').appendChild(frag);
+  }
+
+  // ---------- layout 16:9 ----------
+  function fit() {
+    const s = $('stage'), W = s.clientWidth, H = s.clientHeight;
+    let w = W, h = W * 9 / 16;
+    if (h > H) { h = H; w = H * 16 / 9; }
+    $('frame').style.width = w + 'px';
+    $('frame').style.height = h + 'px';
+  }
+  new ResizeObserver(fit).observe($('stage'));
+  fit();
+
+  // ---------- controles ----------
+  function applySize() {
+    document.documentElement.style.setProperty('--sub-size', subSize + 'px');
+    store.set('subSize', subSize);
+  }
+  applySize();
+  $('show').value = show;
+
+  $('open').onclick = openVideo;
+  $('url').addEventListener('keydown', e => { if (e.key === 'Enter') openVideo(); });
+  $('url').addEventListener('paste', () => setTimeout(openVideo, 0));
+  $('source').onchange = () => { if (currentId) openVideo(); };
+  $('show').onchange = e => { show = e.target.value; store.set('show', show); render(); };
+  $('smaller').onclick = () => { subSize = Math.max(14, subSize - 2); applySize(); };
+  $('bigger').onclick = () => { subSize = Math.min(64, subSize + 2); applySize(); };
+  $('toggleSide').onclick = () => document.body.classList.toggle('no-side');
+  $('list').addEventListener('wheel', () => { userScrolledAt = Date.now(); }, { passive: true });
+
+  function toggleFs() {
+    document.body.classList.toggle('fs');
+    if (window.pywebview && window.pywebview.api) window.pywebview.api.toggle_fullscreen();
+  }
+  $('fullscreen').onclick = toggleFs;
+  $('exitfs').onclick = toggleFs;
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.body.classList.contains('fs')) toggleFs();
+    if (e.key === 'F11') { e.preventDefault(); toggleFs(); }
+  });
+
+  // vídeo passado pela linha de comando (?u=...)
+  window.addEventListener('pywebviewready', () => {
+    const u = new URLSearchParams(location.search).get('u');
+    if (u) { $('url').value = u; openVideo(); }
+  });
+})();
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>
