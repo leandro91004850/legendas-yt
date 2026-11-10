@@ -38,3 +38,127 @@
 2026-11-10 14:23:31,718 WARNING Google: enviei 37 falas e voltaram 36
 2026-11-10 14:23:32,384 WARNING Microsoft HTTP 404: ''
 2026-11-10 14:23:32,384 WARNING Microsoft: HTTP 404
+2026-11-10 14:47:22,303 INFO Vídeo VVHb0f-nx1Y: 2424 falas em en (auto) -> pt
+2026-11-10 14:47:23,498 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:47:24,118 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:47:24,118 WARNING Microsoft: HTTP 404
+2026-11-10 14:47:24,597 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:47:24,741 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:47:24,741 WARNING Microsoft: HTTP 404
+2026-11-10 14:47:30,143 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:47:30,285 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:47:30,286 WARNING Microsoft: HTTP 404
+2026-11-10 14:47:30,761 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:47:30,896 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:47:30,897 WARNING Microsoft: HTTP 404
+2026-11-10 14:47:46,391 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:47:48,915 WARNING Microsoft HTTP 503: "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml'><head><meta content='text/html; charset=utf-8' http-equiv='content-type'/><style type='text/css'>body {font-family:Arial; margin-left:40"
+2026-11-10 14:47:48,915 WARNING Microsoft: HTTP 503
+2026-11-10 14:47:49,389 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:47:51,916 WARNING Microsoft HTTP 503: "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN' 'http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd'><html xmlns='http://www.w3.org/1999/xhtml'><head><meta content='text/html; charset=utf-8' http-equiv='content-type'/><style type='text/css'>body {font-family:Arial; margin-left:40"
+2026-11-10 14:47:51,916 WARNING Microsoft: HTTP 503
+2026-11-10 14:48:10,114 INFO Vídeo VVHb0f-nx1Y: 2424 falas em en (auto) -> pt
+2026-11-10 14:48:11,209 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:11,867 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:11,868 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:12,124 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:12,262 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:12,262 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:17,521 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:17,661 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:17,662 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:18,088 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:18,223 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:18,224 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:20,839 INFO Vídeo QdK-j7SYh4A: 5349 falas em en (auto) -> pt
+2026-11-10 14:48:22,101 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:22,695 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:22,696 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:23,134 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:23,270 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:23,270 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:28,731 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:28,865 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:28,865 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:29,299 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:29,435 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:29,435 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:44,758 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:44,893 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:44,894 WARNING Microsoft: HTTP 404
+2026-11-10 14:48:45,228 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:48:45,363 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:48:45,363 WARNING Microsoft: HTTP 404
+2026-11-10 14:49:15,918 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:49:16,056 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:49:16,056 WARNING Microsoft: HTTP 404
+2026-11-10 14:49:16,433 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 14:49:16,570 WARNING Microsoft HTTP 404: ''
+2026-11-10 14:49:16,570 WARNING Microsoft: HTTP 404
+2026-11-10 14:49:16,571 WARNING 5349 falas ficaram sem tradução (Google: limite de uso atingido (HTTP 429) · Microsoft: HTTP 404). Clique em Abrir para tentar de novo. Detalhes em legendas-yt.log
+2026-11-10 15:00:14,385 INFO Vídeo QdK-j7SYh4A: 5349 falas em en (auto) -> pt
+2026-11-10 15:00:15,698 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:00:16,403 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:00:16,403 WARNING Microsoft: HTTP 404
+2026-11-10 15:00:16,833 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:00:16,972 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:00:16,972 WARNING Microsoft: HTTP 404
+2026-11-10 15:00:22,518 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:00:22,655 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:00:22,655 WARNING Microsoft: HTTP 404
+2026-11-10 15:00:22,901 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:00:23,037 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:00:23,037 WARNING Microsoft: HTTP 404
+2026-11-10 15:04:15,494 INFO Vídeo QdK-j7SYh4A: 5349 falas em en (auto) -> pt
+2026-11-10 15:04:16,593 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:04:17,320 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:04:17,320 WARNING Microsoft: HTTP 404
+2026-11-10 15:04:17,823 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:04:17,964 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:04:17,965 WARNING Microsoft: HTTP 404
+2026-11-10 15:04:23,314 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:04:23,450 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:04:23,451 WARNING Microsoft: HTTP 404
+2026-11-10 15:04:23,888 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:04:24,024 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:04:24,024 WARNING Microsoft: HTTP 404
+2026-11-10 15:04:39,562 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:04:39,706 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:04:39,712 WARNING Microsoft: HTTP 404
+2026-11-10 15:04:40,136 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:04:40,274 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:04:40,274 WARNING Microsoft: HTTP 404
+2026-11-10 15:05:10,596 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:05:10,735 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:05:10,736 WARNING Microsoft: HTTP 404
+2026-11-10 15:05:11,242 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:05:11,379 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:05:11,379 WARNING Microsoft: HTTP 404
+2026-11-10 15:05:11,382 WARNING 5349 falas ficaram sem tradução (Google: limite de uso atingido (HTTP 429) · Microsoft: HTTP 404). Clique em Abrir para tentar de novo. Detalhes em legendas-yt.log
+2026-11-10 15:30:17,362 INFO Vídeo XH32psFPxao: 1756 falas em en (auto) -> pt
+2026-11-10 15:30:18,675 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:30:19,303 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:30:19,303 WARNING Microsoft: HTTP 404
+2026-11-10 15:30:19,774 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:30:19,914 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:30:19,917 WARNING Microsoft: HTTP 404
+2026-11-10 15:30:25,450 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:30:25,589 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:30:25,589 WARNING Microsoft: HTTP 404
+2026-11-10 15:30:25,845 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:30:25,984 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:30:25,984 WARNING Microsoft: HTTP 404
+2026-11-10 15:30:41,293 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:30:41,431 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:30:41,431 WARNING Microsoft: HTTP 404
+2026-11-10 15:30:41,898 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:30:42,036 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:30:42,037 WARNING Microsoft: HTTP 404
+2026-11-10 15:31:12,591 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:31:12,728 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:31:12,729 WARNING Microsoft: HTTP 404
+2026-11-10 15:31:13,109 WARNING Google: limite de uso atingido (HTTP 429)
+2026-11-10 15:31:13,244 WARNING Microsoft HTTP 404: ''
+2026-11-10 15:31:13,244 WARNING Microsoft: HTTP 404
+2026-11-10 15:31:13,246 WARNING 1756 falas ficaram sem tradução (Google: limite de uso atingido (HTTP 429) · Microsoft: HTTP 404). Clique em Abrir para tentar de novo. Detalhes em legendas-yt.log
+2026-11-10 15:36:08,470 INFO Vídeo XH32psFPxao: 1756 falas em en (auto) -> pt
