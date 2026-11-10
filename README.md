@@ -27,6 +27,11 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 3. A tradução do começo chega em 1–2 s; o resto vai sendo preenchido enquanto o vídeo toca.
 4. Extras: A−/A+ (tamanho da legenda), "Só tradução"/"Só original",
    ☰ lista de falas (clique para pular até a fala), ⛶ tela cheia com legendas (Esc sai).
+5. **Recentes** lista os últimos 30 vídeos abertos, com o ponto onde você parou; clique para
+   continuar dali. Ao abrir o app de novo, ele volta no último vídeo, parado onde estava,
+   com o mesmo tamanho de legenda e o mesmo modo (original, tradução ou os dois).
+   O histórico e essas preferências ficam em `%APPDATA%\LegendasYT\` (Windows) ou
+   `~/.local/share/LegendasYT/` (Linux).
 
 ## Como funciona
 
@@ -39,6 +44,9 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
   após 5, 15 e 30 s, e o erro aparece em vermelho no topo da janela.
 - A interface (`ui/index.html`) usa a API oficial do player do YouTube e consulta o tempo
   do vídeo 10×/s para mostrar a fala certa.
+- A interface é servida por um servidor local e aberta em `http://localhost:8765` — por nome,
+  não por IP: com a página em `127.0.0.1` o YouTube recusa alguns vídeos (ex.: compilações
+  de música) com "Este vídeo não está disponível", mesmo quando o dono permite incorporar.
 
 ## Se a tradução não aparecer
 
