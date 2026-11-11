@@ -31,7 +31,8 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
    falas somem e fica só o vídeo, com a legenda proporcional a ele. Aumente a janela para o
    menu e a lista voltarem.
 5. **Recentes** lista os últimos 30 vídeos abertos, com o ponto onde você parou; clique para
-   continuar dali. O **×** ao lado de cada vídeo o tira da lista.
+   continuar dali. Ao lado de cada vídeo, as setas o sobem ou descem na lista (é essa a ordem
+   da sequência do item 6) e o **×** o tira da lista.
 6. Quando um vídeo termina, o app toca o de baixo na lista de Recentes (marcado **a seguir**),
    de onde ele tinha parado, e assim por diante até o fim da lista. Um link novo entra no topo;
    um vídeo aberto pela lista fica no lugar dele, para a sequência seguir dali. Se um vídeo da

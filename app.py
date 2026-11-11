@@ -224,7 +224,8 @@ class Prefs:
 class History:
     """Lista de vídeos recentes: {id, url, source, at, title, author, pos, dur}.
     Link novo entra no topo; vídeo aberto pela própria lista fica no lugar, para que, quando ele
-    termina, o app siga para o de baixo. `at` diz quando cada um foi aberto pela última vez."""
+    termina, o app siga para o de baixo. As setas da lista sobem ou descem um vídeo (move).
+    `at` diz quando cada um foi aberto pela última vez."""
 
     def __init__(self, path: Path, limit: int = HISTORY_LIMIT):
         self.path, self.limit = path, limit
@@ -269,6 +270,21 @@ class History:
             if len(left) == len(self._items):
                 return False
             self._items, self._dirty = left, True
+        self.save()
+        return True
+
+    def move(self, vid: str, delta: int) -> bool:
+        """Sobe (delta < 0) ou desce (delta > 0) o vídeo na lista, sem mudar o `at`.
+        Devolve True se ele mudou de lugar."""
+        with self._lock:
+            i = next((n for n, x in enumerate(self._items) if x["id"] == vid), None)
+            if i is None:
+                return False
+            j = max(0, min(len(self._items) - 1, i + delta))
+            if j == i:
+                return False
+            self._items.insert(j, self._items.pop(i))
+            self._dirty = True
         self.save()
         return True
 
@@ -345,6 +361,11 @@ class Api:
         """Tira um vídeo da lista de recentes."""
         if extract_video_id(str(video_id)) == video_id:
             self._history.remove(video_id)
+
+    def move_in_history(self, video_id, delta):
+        """Sobe (-1) ou desce (+1) um vídeo na lista de recentes."""
+        if extract_video_id(str(video_id)) == video_id and delta in (-1, 1):
+            self._history.move(video_id, int(delta))
 
     def progress(self, video_id, seconds, duration):
         """A interface avisa onde o vídeo está, para retomar dali depois."""
