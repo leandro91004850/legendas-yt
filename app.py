@@ -41,6 +41,9 @@ from tradutor import ENGINES, MYMEMORY_DAILY_CHARS, RESERVE, RateLimited, Transl
 BASE_DIR = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 UI_DIR = BASE_DIR / "ui"
 PREFERRED_PORT = 8765      # porta preferida da interface (se estiver ocupada, usa outra)
+# Tamanho mínimo da janela. Abaixo de uns 720×460 a interface esconde o menu e a lista de falas
+# e mostra só o vídeo (ui/index.html, @media no fim do <style>).
+MIN_WINDOW = (320, 200)
 CHUNK_CHARS = 1200         # tamanho de cada lote enviado ao tradutor
 CHUNK_LINES = 40
 RETRY_WAITS = (5, 15, 30)  # novas tentativas para lotes que falharam (segundos)
@@ -642,7 +645,7 @@ def main():
         js_api=api,
         width=1280,
         height=780,
-        min_size=(720, 460),
+        min_size=MIN_WINDOW,
         background_color="#0f0f10",
     )
     api._window = window

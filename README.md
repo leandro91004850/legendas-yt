@@ -27,6 +27,9 @@ python app.py "https://www.youtube.com/watch?v=XXXXXXXXXXX"
 3. A tradução do começo chega em 1–2 s; o resto vai sendo preenchido enquanto o vídeo toca.
 4. Extras: A−/A+ (tamanho da legenda), "Só tradução"/"Só original",
    ☰ lista de falas (clique para pular até a fala), ⛶ tela cheia com legendas (Esc sai).
+   A janela pode ficar bem pequena (até 320×200): abaixo de uns 720×460, o menu e a lista de
+   falas somem e fica só o vídeo, com a legenda proporcional a ele. Aumente a janela para o
+   menu e a lista voltarem.
 5. **Recentes** lista os últimos 30 vídeos abertos, com o ponto onde você parou; clique para
    continuar dali. O **×** ao lado de cada vídeo o tira da lista.
 6. Quando um vídeo termina, o app toca o de baixo na lista de Recentes (marcado **a seguir**),

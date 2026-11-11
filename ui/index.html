@@ -63,12 +63,14 @@
   #empty b { color: var(--text); font-size: 18px; }
 
   #subs { position: absolute; left: 4%; right: 4%; bottom: 13%; text-align: center;
-    pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    --sub-px: var(--sub-size); }
   #subs span { display: inline-block; max-width: 100%; padding: 2px 12px; border-radius: 5px;
     background: rgba(0,0,0,.74); text-shadow: 0 1px 2px #000; }
   #subs span:empty { display: none; }
-  #sub-orig { font-size: var(--sub-size); color: #fff; }
-  #sub-tr { font-size: calc(var(--sub-size) * .95); color: var(--accent); }
+  #sub-orig { font-size: var(--sub-px); color: #fff; }
+  #sub-tr { font-size: calc(var(--sub-px) * .95); color: var(--accent); }
+  #empty .when-compact { display: none; }
 
   aside { width: 360px; flex: none; border-left: 1px solid var(--line); background: var(--panel);
     display: flex; flex-direction: column; min-height: 0; }
@@ -87,6 +89,17 @@
   #exitfs { display: none; position: absolute; top: 10px; right: 10px; opacity: .35; z-index: 5; }
   #exitfs:hover { opacity: 1; }
   body.fs #exitfs { display: block; }
+
+  /* Janela pequena (abaixo de uns 720×460, o antigo tamanho mínimo): só o vídeo, sem o menu e
+     sem a lista de falas; aumentar a janela traz os dois de volta. A legenda sobre o vídeo
+     acompanha o tamanho dele (6,5% da altura, no máximo o tamanho escolhido em A−/A+). */
+  @media (max-width: 700px), (max-height: 420px) {
+    header, aside { display: none; }
+    #subs { --sub-px: min(var(--sub-size), max(11px, calc(var(--frame-h, 400px) * .065))); }
+    #subs span { padding: 1px 8px; }
+    #empty .when-full { display: none; }
+    #empty .when-compact { display: block; }
+  }
 </style>
 </head>
 <body>
@@ -122,8 +135,10 @@
   <section id="stage">
     <div id="frame">
       <div id="player"></div>
-      <div id="empty"><b>Legendas YT</b>Cole um link do YouTube acima.<br>
-        A legenda original e a tradução aparecem sobre o vídeo.</div>
+      <div id="empty"><b>Legendas YT</b>
+        <span class="when-full">Cole um link do YouTube acima.<br>
+          A legenda original e a tradução aparecem sobre o vídeo.</span>
+        <span class="when-compact">Aumente a janela para ver o menu.</span></div>
       <div id="subs"><span id="sub-orig"></span><span id="sub-tr"></span></div>
     </div>
     <button id="exitfs">Sair da tela cheia</button>
@@ -446,6 +461,7 @@
     if (h > H) { h = H; w = H * 16 / 9; }
     $('frame').style.width = w + 'px';
     $('frame').style.height = h + 'px';
+    $('frame').style.setProperty('--frame-h', h + 'px');   // a legenda acompanha o vídeo na janela pequena
   }
   new ResizeObserver(fit).observe($('stage'));
   fit();
