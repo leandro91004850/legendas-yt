@@ -219,7 +219,9 @@ class Prefs:
 
 
 class History:
-    """Últimos vídeos abertos, o mais recente primeiro: {id, url, source, at, title, author, pos, dur}."""
+    """Lista de vídeos recentes: {id, url, source, at, title, author, pos, dur}.
+    Link novo entra no topo; vídeo aberto pela própria lista fica no lugar, para que, quando ele
+    termina, o app siga para o de baixo. `at` diz quando cada um foi aberto pela última vez."""
 
     def __init__(self, path: Path, limit: int = HISTORY_LIMIT):
         self.path, self.limit = path, limit
@@ -236,21 +238,36 @@ class History:
         with self._lock:
             return [dict(x) for x in self._items]
 
-    def opened(self, vid: str, source: str) -> bool:
-        """Vídeo aberto agora: vai para o topo. Devolve True se ainda não tem título."""
+    def opened(self, vid: str, source: str, keep_place: bool = False) -> bool:
+        """Vídeo aberto agora. Sem keep_place (link colado), vai para o topo; com keep_place (aberto
+        pela lista, ou o mesmo vídeo de novo), fica onde está e, se tinha saído da lista, não volta.
+        Devolve True se ainda não tem título."""
         with self._lock:
             item = next((x for x in self._items if x["id"] == vid), None)
+            if item is None and keep_place:
+                return False
             if item is None:
                 item = {"id": vid}
-            else:
+                self._items.insert(0, item)
+            elif not keep_place:
                 self._items.remove(item)
+                self._items.insert(0, item)
             item.update(url=f"https://www.youtube.com/watch?v={vid}", source=source, at=int(time.time()))
-            self._items.insert(0, item)
             del self._items[self.limit:]
             self._dirty = True
             need_title = not item.get("title")
         self.save()
         return need_title
+
+    def remove(self, vid: str) -> bool:
+        """Tira o vídeo da lista. Devolve True se ele estava lá."""
+        with self._lock:
+            left = [x for x in self._items if x["id"] != vid]
+            if len(left) == len(self._items):
+                return False
+            self._items, self._dirty = left, True
+        self.save()
+        return True
 
     def update(self, vid: str, **fields) -> None:
         """Atualiza título ou posição de um vídeo, sem mudar a ordem."""
@@ -291,6 +308,7 @@ class Api:
         self._window = None
         self._job = 0
         self._focus = 0
+        self._vid = None  # vídeo aberto por último
         self._lock = threading.Lock()
         self._cache: dict[tuple[str, str], tuple[dict, list, str]] = {}
         self._log_name = log_path.name if log_path else "legendas-yt.log"
@@ -299,7 +317,8 @@ class Api:
         self._prefs = prefs or Prefs(data_dir() / "preferencias.json")
 
     # ---- chamados pelo JavaScript ----
-    def load(self, url, source="auto"):
+    def load(self, url, source="auto", keep_place=False):
+        """keep_place: o vídeo foi aberto pela lista de recentes e fica no lugar dele."""
         vid = extract_video_id(url)
         if not vid:
             return {"ok": False, "error": "Link do YouTube inválido."}
@@ -307,14 +326,22 @@ class Api:
             self._job += 1
             job = self._job
             self._focus = 0
+            # o mesmo vídeo de novo (trocou o idioma, nova tentativa) também não muda de lugar
+            keep_place = bool(keep_place) or vid == self._vid
+            self._vid = vid
         threading.Thread(target=self._work, args=(job, vid, source), daemon=True).start()
-        if self._history.opened(vid, source):
+        if self._history.opened(vid, source, keep_place):
             threading.Thread(target=self._fetch_title, args=(vid,), daemon=True).start()
         return {"ok": True, "videoId": vid, "job": job}
 
     def history(self):
-        """Últimos vídeos abertos, o mais recente primeiro."""
+        """Lista de vídeos recentes, na ordem em que aparece."""
         return self._history.items()
+
+    def remove_from_history(self, video_id):
+        """Tira um vídeo da lista de recentes."""
+        if extract_video_id(str(video_id)) == video_id:
+            self._history.remove(video_id)
 
     def progress(self, video_id, seconds, duration):
         """A interface avisa onde o vídeo está, para retomar dali depois."""

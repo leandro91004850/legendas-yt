@@ -43,9 +43,14 @@
     border-radius: 4px; overflow: hidden; }
   .r-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .r-thumb i { position: absolute; left: 0; bottom: 0; width: 0; height: 3px; background: var(--red); }
-  .r-txt { min-width: 0; }
+  .r-txt { flex: 1; min-width: 0; }
   .r-title { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .r-meta { margin-top: 2px; font-size: 12px; color: var(--muted); }
+  .r-next { color: var(--accent); font-weight: 600; }
+  .r-del { flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%;
+    background: none; color: var(--muted); font-size: 20px; line-height: 1; opacity: .45; }
+  .r-item:hover .r-del, .r-del:focus-visible { opacity: 1; }
+  .r-del:hover { background: #34343b; color: var(--text); }
   .r-empty { padding: 14px 12px; color: var(--muted); }
 
   main { flex: 1; display: flex; min-height: 0; }
@@ -135,6 +140,7 @@
 
   let player = null, apiReady = false, pending = null, currentId = null;
   let recent = [], lastProgressAt = 0;
+  let autoNext = false, nextHint = null, advancing = false;   // sequência: ver playNext()
   let job = 0, cues = [], tr = [], cur = -1, translatedCount = 0, meta = null;
   let show = 'both', subSize = 26;     // preferências: o Python guarda e devolve em loadPrefs()
   let userScrolledAt = 0, lastFocusAt = 0, lastReq = { key: '', at: 0 };
@@ -163,6 +169,7 @@
   function playVideo(id, start = 0, autoplay = true) {
     saveProgress(true);                  // guarda onde o vídeo anterior parou
     currentId = id;
+    nextHint = null;
     setPlayerError('');
     $('empty').style.display = 'none';
     if (!apiReady) { pending = { id, start, autoplay }; return; }
@@ -180,6 +187,7 @@
         onStateChange: e => {
           if (e.data === YT.PlayerState.PLAYING) setPlayerError('');
           if (e.data === YT.PlayerState.PAUSED || e.data === YT.PlayerState.ENDED) saveProgress(true);
+          if (e.data === YT.PlayerState.ENDED) playNext();
         },
         onError: e => {
           const msgs = {
@@ -190,14 +198,21 @@
             150: 'O dono do vídeo não permite reprodução fora do YouTube.',
             153: 'O YouTube recusou o player incorporado (erro 153).',
           };
-          setPlayerError(msgs[e.data] || ('Erro do player: ' + e.data));
+          const msg = msgs[e.data] || ('Erro do player: ' + e.data);
+          // na sequência automática, um vídeo que não toca não trava a fila: pula para o próximo
+          if (autoNext && nextAfterCurrent()) {
+            setPlayerError(msg + ' Indo para o próximo…');
+            const from = currentId;
+            setTimeout(() => { if (currentId === from) playNext(); }, 4000);
+          } else setPlayerError(msg);
         },
       },
     });
   }
 
   // ---------- abrir vídeo ----------
-  // opts.start / opts.autoplay: usados ao abrir pelo histórico
+  // opts.start / opts.autoplay / opts.keepPlace: usados ao abrir pelo histórico (o vídeo fica no
+  // lugar dele na lista); opts.auto: aberto sozinho, porque o anterior terminou
   async function openVideo(opts = {}) {
     const url = $('url').value.trim();
     if (!url) return;
@@ -205,10 +220,13 @@
     const key = url + '|' + $('source').value;            // colar + Enter não pede 2 vezes
     if (key === lastReq.key && Date.now() - lastReq.at < 1500) return;
     lastReq = { key, at: Date.now() };
-    const r = await window.pywebview.api.load(url, $('source').value);
+    const r = await window.pywebview.api.load(url, $('source').value, !!opts.keepPlace);
     if (!r.ok) { setStatusText(r.error, true); return; }
     if (r.job > job) { job = r.job; reset(); }
-    if (r.videoId !== currentId) playVideo(r.videoId, opts.start || 0, opts.autoplay !== false);
+    if (r.videoId !== currentId) {
+      autoNext = !!opts.auto;
+      playVideo(r.videoId, opts.start || 0, opts.autoplay !== false);
+    }
   }
 
   function reset() {
@@ -245,19 +263,29 @@
   function renderRecent() {
     const list = $('recentList');
     list.innerHTML = '';
-    if (!recent.length) { list.innerHTML = '<div class="r-empty">Nenhum vídeo aberto ainda.</div>'; return; }
+    if (!recent.length) { list.innerHTML = '<div class="r-empty">Nenhum vídeo na lista.</div>'; return; }
+    const upNext = nextAfterCurrent();
     for (const h of recent) {
       const el = document.createElement('div');
       el.className = 'r-item' + (h.id === currentId ? ' current' : '');
       el.innerHTML = '<div class="r-thumb"><img alt="" loading="lazy"><i></i></div>' +
-                     '<div class="r-txt"><div class="r-title"></div><div class="r-meta"></div></div>';
+                     '<div class="r-txt"><div class="r-title"></div><div class="r-meta"></div></div>' +
+                     '<button class="r-del" title="Remover da lista" aria-label="Remover da lista">×</button>';
       el.querySelector('img').src = `https://i.ytimg.com/vi/${h.id}/mqdefault.jpg`;
       if (h.dur > 0) el.querySelector('i').style.width = Math.min(100, 100 * (h.pos || 0) / h.dur) + '%';
       el.querySelector('.r-title').textContent = h.title || h.url;
       const where = h.pos > 10 && h.dur > 0 ? `parou em ${fmt(h.pos)} de ${fmt(h.dur)}` : '';
       const when = h.at ? new Date(h.at * 1000).toLocaleString('pt-BR',
         { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
-      el.querySelector('.r-meta').textContent = [h.author, where, when].filter(Boolean).join(' · ');
+      const info = [h.author, where, when].filter(Boolean).join(' · ');
+      const meta = el.querySelector('.r-meta');
+      if (h === upNext) {                 // toca quando o vídeo atual terminar
+        const tag = document.createElement('span');
+        tag.className = 'r-next';
+        tag.textContent = 'a seguir';
+        meta.append(tag, info ? ' · ' + info : '');
+      } else meta.textContent = info;
+      el.querySelector('.r-del').onclick = e => { e.stopPropagation(); removeRecent(h.id); };
       el.onclick = () => {
         $('recent').hidden = true;
         if (h.id !== currentId) openFromHistory(h, true);
@@ -273,10 +301,43 @@
     $('recent').hidden = false;
   }
 
-  function openFromHistory(h, autoplay) {
+  // abrir pela lista não tira o vídeo do lugar: quando ele terminar, a sequência segue para o de baixo
+  function openFromHistory(h, autoplay, auto = false) {
     $('url').value = h.url;
     $('source').value = h.source || 'auto';
-    openVideo({ start: resumePoint(h), autoplay });
+    return openVideo({ start: resumePoint(h), autoplay, keepPlace: true, auto });
+  }
+
+  async function removeRecent(id) {
+    const i = recent.findIndex(h => h.id === id);
+    if (i < 0) return;
+    // o vídeo que está tocando (ou o que viria depois dele) saiu da lista: guarda quem vem
+    // em seguida, para a sequência continuar dali quando o atual terminar
+    if (id === currentId || id === nextHint) nextHint = recent[i + 1] ? recent[i + 1].id : null;
+    recent.splice(i, 1);
+    renderRecent();
+    try { await window.pywebview.api.remove_from_history(id); } catch {}
+  }
+
+  // ---------- sequência: quando um vídeo termina, toca o de baixo na lista de recentes ----------
+  function nextAfterCurrent() {
+    const i = recent.findIndex(h => h.id === currentId);
+    if (i >= 0) return recent[i + 1] || null;
+    return recent.find(h => h.id === nextHint) || null;    // o atual saiu da lista
+  }
+
+  async function playNext() {
+    if (advancing || !hasApi()) return;
+    advancing = true;
+    try {
+      await loadRecent();
+      const h = nextAfterCurrent();
+      if (!h) return;                    // era o último da lista
+      await openFromHistory(h, true, true);
+      if (!$('recent').hidden) { await loadRecent(); renderRecent(); }
+    } finally {
+      advancing = false;
+    }
   }
 
   // ---------- chamados pelo Python ----------
@@ -432,13 +493,15 @@
     if (e.key === 'F11') { e.preventDefault(); toggleFs(); }
   });
 
-  // vídeo passado pela linha de comando (?u=...); sem ele, reabre o último vídeo, parado onde estava
+  // vídeo passado pela linha de comando (?u=...); sem ele, reabre o último vídeo assistido, parado
+  // onde estava (nem sempre é o do topo: vídeo aberto pela lista fica no lugar dele)
   window.addEventListener('pywebviewready', async () => {
     loadPrefs();
     const u = new URLSearchParams(location.search).get('u');
     if (u) { $('url').value = u; openVideo(); return; }
     await loadRecent();
-    if (recent.length) openFromHistory(recent[0], false);
+    const last = recent.reduce((a, h) => ((h.at || 0) > (a.at || 0) ? h : a), recent[0]);
+    if (last) openFromHistory(last, false);
   });
 })();
 </script>
